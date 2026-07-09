@@ -9,7 +9,14 @@ back to real values on the way back to the user.
 - **Product B — API Proxy**: OpenAI-compatible endpoint (`/v1/chat/completions`) —
   change one base URL and get redaction transparently, including streamed responses.
 
-## Quick start
+## Deploy targets
+- **Any Linux server / VPS** — `./deploy.sh prod --build --seed` (see `docs/deploy.md`)
+- **Coolify** (git-connected) — same compose, no `deploy.sh` needed (see `docs/coolify.md`)
+
+The `docker-compose.yml` is provider-agnostic: a one-shot `migrate` service makes
+the stack self-migrating anywhere `docker compose up` runs.
+
+## Quick start (local)
 
 ```bash
 ./deploy.sh dev --build --seed

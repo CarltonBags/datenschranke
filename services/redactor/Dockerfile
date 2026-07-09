@@ -30,8 +30,10 @@ COPY app ./app
 
 EXPOSE 8000
 
-# 2+ workers; models stay in memory per worker (~1-2 GB each — see docs/sizing.md).
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+# Workers configurable via UVICORN_WORKERS (default 2). Each worker keeps spaCy
+# models in memory (~1-2 GB — see docs/sizing.md). On an 8 GB box set it to 1.
+ENV UVICORN_WORKERS=2
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers ${UVICORN_WORKERS:-2}"]
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=150s --retries=5 \
   CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/healthz').status==200 else 1)"

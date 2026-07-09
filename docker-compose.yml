@@ -42,6 +42,8 @@ services:
     <<: *restart
     environment:
       LOG_LEVEL: info
+      # Lower to 1 on small (8 GB) hosts; each worker holds spaCy models in RAM.
+      UVICORN_WORKERS: ${UVICORN_WORKERS:-2}
     ports:
       - "${REDACTOR_PORT:-8000}:8000"
     healthcheck:
@@ -65,6 +67,24 @@ services:
     ports:
       - "9090:9090"
 
+  # One-shot: applies SQL migrations then exits. Runs as the Postgres SUPERUSER
+  # (migrations create the least-priv `gateway` role + extensions). This makes
+  # the stack self-migrating on ANY platform that just runs `docker compose up`
+  # (e.g. Coolify), without depending on deploy.sh. deploy.sh also migrates —
+  # idempotent, so running both is safe.
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/gateway/Dockerfile
+    command: ["node", "/repo/infra/migrations/migrate.mjs"]
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/gdpr
+      GATEWAY_DB_PASSWORD: ${GATEWAY_DB_PASSWORD:?set GATEWAY_DB_PASSWORD}
+
   gateway:
     build:
       context: .
@@ -77,6 +97,8 @@ services:
         condition: service_healthy
       redactor:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     environment:
       GATEWAY_PORT: 8080
       GATEWAY_DATABASE_URL: postgres://gateway:${GATEWAY_DB_PASSWORD:?set GATEWAY_DB_PASSWORD}@postgres:5432/gdpr
