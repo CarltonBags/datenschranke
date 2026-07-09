@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { RedactionPanel } from "../components/RedactionPanel";
+import { ShieldIcon } from "../components/ShieldIcon";
 import {
   createConversation,
   deleteConversation,
@@ -129,7 +130,7 @@ export default function ChatPage() {
       {/* Sidebar (glass surface) */}
       <aside className="glass" style={{ margin: 12, borderRadius: "var(--radius-xl)", padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <strong style={{ fontSize: 15 }}>🛡 Company Chat</strong>
+          <strong style={{ fontSize: 16, letterSpacing: "0.2px" }}>Datenschranke</strong>
           <ThemeToggle />
         </div>
         <button
@@ -183,26 +184,33 @@ export default function ChatPage() {
       </aside>
 
       {/* Main column */}
-      <main style={{ display: "flex", flexDirection: "column", height: "100vh", padding: "12px 12px 12px 0" }}>
-        <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "16px 8px" }}>
+      <main style={{ position: "relative", display: "flex", flexDirection: "column", height: "100vh", padding: "12px 12px 12px 0" }}>
+        {/* Warmwind-style top notch */}
+        <div className="glass notch">
+          <span className="dot" />
+          Datenschranke
+          <span style={{ opacity: 0.55, fontWeight: 400 }}>· geschützt</span>
+        </div>
+        <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "48px 8px 16px" }}>
           <div style={{ maxWidth: 760, margin: "0 auto", display: "flex", flexDirection: "column", gap: 16 }}>
             {messages.length === 0 && (
-              <div style={{ textAlign: "center", color: "var(--text-secondary)", marginTop: 80 }}>
-                <div style={{ fontSize: 40, marginBottom: 8 }}>🛡</div>
+              <div style={{ textAlign: "center", color: "var(--text-secondary)", marginTop: 90 }}>
+                <div style={{ display: "inline-flex", color: "var(--shield)", marginBottom: 12, opacity: 0.9 }}>
+                  <ShieldIcon size={38} />
+                </div>
                 <h1 style={{ fontSize: 22, margin: "0 0 6px", color: "var(--text-primary)" }}>Wie kann ich helfen?</h1>
-                <p style={{ margin: 0, fontSize: 14 }}>Schreiben Sie normal — Namen, IBANs & Co. bleiben geschützt.</p>
+                <p style={{ margin: 0, fontSize: 14 }}>Schreiben Sie normal — Namen, IBANs &amp; Co. bleiben geschützt.</p>
               </div>
             )}
             {messages.map((m, i) => (
               <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start" }}>
                 <div
-                  className={m.role === "assistant" ? "glass" : "transition"}
+                  className={`msg-glass transition ${m.role === "user" ? "msg-user" : "msg-assistant"}`}
                   style={{
                     maxWidth: "85%",
                     padding: "12px 15px",
                     borderRadius: "var(--radius-lg)",
-                    background: m.role === "user" ? "var(--accent)" : undefined,
-                    color: m.role === "user" ? "var(--accent-contrast)" : "var(--text-primary)",
+                    color: "var(--text-primary)",
                     whiteSpace: "pre-wrap",
                     lineHeight: 1.55,
                     fontSize: 14.5,

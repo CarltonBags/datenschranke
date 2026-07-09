@@ -151,6 +151,56 @@ html, body {
 }
 .glass-strong { background: var(--surface-glass-strong); }
 
+/* Almost-see-through grainy glass for chat message bubbles. */
+.msg-glass {
+  position: relative;
+  border: 1px solid var(--border-glass);
+  backdrop-filter: blur(18px) saturate(135%);
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
+  box-shadow: 0 6px 22px rgba(30, 20, 40, 0.08);
+}
+.msg-glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: var(--grain, 0.05);
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .msg-glass { background: var(--surface); }
+}
+/* Assistant bubble: neutral faint glass. User bubble: faint accent tint. */
+.msg-assistant { background: color-mix(in srgb, var(--surface-glass) 70%, transparent); }
+.msg-user { background: color-mix(in srgb, var(--accent) 20%, var(--surface-glass)); }
+
+/* Warmwind-style top notch — a small floating glass pill, centered. */
+.notch {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  color: var(--text-primary);
+}
+.notch .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--shield);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--shield) 22%, transparent);
+}
+
 /* Solid fallback where backdrop-filter is unsupported. */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .glass { background: var(--surface); }

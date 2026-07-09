@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Protection } from "../lib/chat";
+import { ShieldIcon } from "./ShieldIcon";
 
 const TYPE_LABEL: Record<string, string> = {
   PERSON: "Name",
@@ -29,7 +30,7 @@ export function RedactionPanel({ protection }: { protection: Protection }) {
   if (total === 0) {
     return (
       <div style={{ marginTop: 8, fontSize: 12, color: "var(--text-secondary)", display: "inline-flex", gap: 6, alignItems: "center" }}>
-        <span aria-hidden>🛡</span> Keine personenbezogenen Daten erkannt
+        <ShieldIcon size={13} /> Keine personenbezogenen Daten erkannt
       </div>
     );
   }
@@ -52,7 +53,7 @@ export function RedactionPanel({ protection }: { protection: Protection }) {
           fontWeight: 600,
         }}
       >
-        <span aria-hidden>🛡</span>
+        <ShieldIcon size={14} />
         {total} {total === 1 ? "Angabe" : "Angaben"} geschützt
         {imageEntities > 0 && <span style={{ opacity: 0.75, fontWeight: 400 }}>· 🖼 {imageEntities}</span>}
         <span style={{ opacity: 0.6, fontWeight: 400 }}>{open ? "▾" : "▸"}</span>
