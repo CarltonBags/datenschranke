@@ -42,7 +42,7 @@ async function main() {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${key}`, "x-conversation-id": convId },
       body: JSON.stringify({
-        model: process.env.SMOKE_MODEL ?? (useMock ? "gpt-4o-mini" : "deepseek-chat"),
+        model: process.env.SMOKE_MODEL ?? (useMock ? "gpt-4o-mini" : "gpt-4o"),
         stream: false,
         messages: [{ role: "user", content: `Ich bin ${NAME}, meine IBAN ist ${IBAN}.` }],
       }),

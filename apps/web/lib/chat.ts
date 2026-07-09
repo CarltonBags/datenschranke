@@ -86,7 +86,7 @@ export async function streamMessage(
   const res = await fetch(`/api/gw/conversations/${conversationId}/messages`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ model: "deepseek-chat", stream: true, messages }),
+    body: JSON.stringify({ model: "gpt-4o", stream: true, messages }),
     signal: handlers.signal,
   });
   if (!res.ok || !res.body) {
