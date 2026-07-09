@@ -51,6 +51,20 @@ Coolify is **one** supported target. Nothing in the app depends on it — the sa
    OIDC is wired), redeploy `web`.
 7. **Auto-deploy on push** is enabled by default.
 
+## Recommended for KVM 2: pull prebuilt images (don't build on-box)
+Building the redactor (spaCy + OpenCV + Tesseract) on an 8 GB box is slow and can
+OOM. Instead let GitHub build the images and have Coolify **pull** them:
+
+1. `.github/workflows/build-images.yml` builds `redactor`, `gateway`, `web` on
+   GitHub's runners and pushes to **GHCR** on every push to `main`.
+2. Make the packages public: GitHub → repo **Packages** → each package →
+   *Package settings* → **Change visibility → Public**. (Or add GHCR pull
+   credentials in Coolify for private images.)
+3. In Coolify, set the compose path to **`docker-compose.ghcr.yml`** (pull-only —
+   `image:` refs, no `build:`). Same services, same env vars.
+
+Pin a build by setting `IMAGE_TAG` (e.g. a short SHA); default is `latest`.
+
 ## Sizing on KVM 2 (2 vCPU / 8 GB)
 - `UVICORN_WORKERS=1` is important — 2 workers × ~1.5 GB spaCy + Tesseract can
   OOM alongside Postgres/gateway/web + the build.
