@@ -86,8 +86,11 @@ services:
       DEFAULT_PROVIDER: ${DEFAULT_PROVIDER:-openai}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-    ports:
-      - "${GATEWAY_PORT:-8080}:8080"
+    # No host port publish: Coolify's Traefik routes to this via the domain you
+    # assign (targets the exposed container port). Publishing to the host collides
+    # with other Coolify apps. Set GATEWAY_HOST_PORT only for bare `docker compose`.
+    expose:
+      - "8080"
 
   web:
     image: ghcr.io/carltonbags/datenschranke-web:${IMAGE_TAG:-latest}
@@ -97,8 +100,10 @@ services:
     environment:
       GATEWAY_URL: http://gateway:8080
       DEMO_TENANT_ID: ${DEMO_TENANT_ID:-}
-    ports:
-      - "${WEB_PORT:-3000}:3000"
+    # Assign your domain to THIS service in Coolify (targets port 3000). No host
+    # publish — avoids cross-app port collisions on the box.
+    expose:
+      - "3000"
 
 volumes:
   pgdata:
