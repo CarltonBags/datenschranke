@@ -1,0 +1,125 @@
+# One compose file, two profiles: `dev` (hot reload, mock provider, exposed
+# ports) and `prod` (built images, Caddy TLS, resource limits). No divergent
+# per-environment files. Infra services (postgres/redis) + gateway + redactor
+# run in both profiles; provider-mock is dev-only, caddy is prod-only.
+
+x-restart: &restart
+  restart: unless-stopped
+
+services:
+  postgres:
+    image: postgres:16
+    <<: *restart
+    environment:
+      POSTGRES_DB: gdpr
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d gdpr"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7
+    <<: *restart
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redactor:
+    build:
+      context: ./services/redactor
+    <<: *restart
+    environment:
+      LOG_LEVEL: info
+    ports:
+      - "${REDACTOR_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/healthz').status==200 else 1)\""]
+      interval: 15s
+      timeout: 5s
+      start_period: 150s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 4g
+
+  provider-mock:
+    build:
+      context: ./services/provider-mock
+    <<: *restart
+    profiles: ["dev"]
+    environment:
+      MOCK_LATENCY_MS: ${MOCK_LATENCY_MS:-40}
+    ports:
+      - "9090:9090"
+
+  gateway:
+    build:
+      context: .
+      dockerfile: apps/gateway/Dockerfile
+    <<: *restart
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      redactor:
+        condition: service_healthy
+    environment:
+      GATEWAY_PORT: 8080
+      GATEWAY_DATABASE_URL: postgres://gateway:${GATEWAY_DB_PASSWORD:?set GATEWAY_DB_PASSWORD}@postgres:5432/gdpr
+      REDIS_URL: redis://redis:6379
+      REDACTOR_URL: http://redactor:8000
+      MASTER_ENCRYPTION_KEY: ${MASTER_ENCRYPTION_KEY:?set MASTER_ENCRYPTION_KEY}
+      DEFAULT_PROVIDER: ${DEFAULT_PROVIDER:-mock}
+      MOCK_PROVIDER_URL: http://provider-mock:9090
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    ports:
+      - "${GATEWAY_PORT:-8080}:8080"
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    <<: *restart
+    depends_on:
+      - gateway
+    environment:
+      GATEWAY_URL: http://gateway:8080
+      # Plain (non-NEXT_PUBLIC) so the proxy route reads it at runtime, not baked in.
+      DEMO_TENANT_ID: ${DEMO_TENANT_ID:-}
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+
+  caddy:
+    image: caddy:2
+    <<: *restart
+    profiles: ["prod"]
+    depends_on:
+      - gateway
+      - web
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+      - caddyconfig:/config
+
+volumes:
+  pgdata:
+  caddydata:
+  caddyconfig:

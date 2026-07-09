@@ -1,0 +1,19 @@
+{
+  "note": "Cross-language contract fixtures. Consumed by packages/shared/src/grammar-crosslang.test.ts (TS) AND services/redactor/tests/test_placeholder_crosslang.py (Python). Both must produce/accept these byte-for-byte.",
+  "max_placeholder_length": 17,
+  "make": [
+    { "type": "PERSON", "index": 1, "out": "[[PERSON_1]]" },
+    { "type": "IBAN", "index": 2, "out": "[[IBAN_2]]" },
+    { "type": "CUSTOM", "index": 12, "out": "[[CUSTOM_12]]" },
+    { "type": "LOCATION", "index": 9999, "out": "[[LOCATION_9999]]" },
+    { "type": "EMAIL", "index": 7, "out": "[[EMAIL_7]]" }
+  ],
+  "is_placeholder_true": ["[[PERSON_1]]", "[[CUSTOM_9999]]", "[[MISC_10]]"],
+  "is_placeholder_false": ["[[PERSON_1]", "[[XYZ_1]]", "[[PERSON_12345]]", "PERSON_1", "[[person_1]]"],
+  "prefix_true": ["[", "[[", "[[PER", "[[PERSON_", "[[PERSON_1", "[[CUSTOM_9999", "[[PERSON_12]"],
+  "prefix_false": ["", "[[XYZ", "[[PERSON_1]]", "[[PERSON_12345", "[[PERSON_a", "hello"],
+  "find_in_body": {
+    "text": "Hi [[PERSON_1]], IBAN [[IBAN_2]] and [[CUSTOM_10]].",
+    "out": ["[[PERSON_1]]", "[[IBAN_2]]", "[[CUSTOM_10]]"]
+  }
+}

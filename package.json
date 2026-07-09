@@ -1,0 +1,22 @@
+{
+  "name": "gdpr-ai-gateway",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "dev": "pnpm --parallel --filter ./apps/* dev",
+    "grammar:cross-test": "pnpm --filter @gdpr/shared test && python -m pytest services/redactor/tests/test_placeholder_crosslang.py"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  }
+}

@@ -1,0 +1,42 @@
+[project]
+name = "gdpr-redactor"
+version = "0.1.0"
+description = "GDPR AI Gateway — PII redaction service (Presidio + spaCy)"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi==0.115.4",
+    "uvicorn[standard]==0.32.0",
+    "pydantic==2.9.2",
+    # Pin Presidio to a version that ships the German recognizer set (Steuer-IdNr,
+    # Steuernummer, Reisepass, Personalausweis, Renten-/Krankenversicherung —
+    # added upstream in 2026). Do NOT bump without re-checking that set exists.
+    "presidio-analyzer==2.2.360",
+    "presidio-anonymizer==2.2.360",
+    # Image PII redaction (OCR via Tesseract). Tesseract binary + deu/eng lang
+    # packs are installed in the Dockerfile.
+    "presidio-image-redactor==0.0.55",
+    "pillow==10.4.0",
+    "pytesseract==0.3.13",
+    "spacy==3.7.5",
+    "langdetect==1.0.9",
+    # Pin numpy<2: spaCy/thinc 3.7.x ship wheels compiled against numpy 1.x;
+    # presidio-image-redactor's deps would otherwise pull numpy 2.x → ABI clash
+    # ("numpy.dtype size changed"). Keep 1.26.4.
+    "numpy==1.26.4",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==8.3.3",
+    "httpx==0.27.2",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = [
+    "presidio: integration tests that require Presidio + spaCy models (skipped if unavailable)",
+]
+
+[tool.uv]
+package = false

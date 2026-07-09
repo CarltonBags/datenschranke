@@ -1,0 +1,339 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { ThemeToggle } from "../components/ThemeToggle";
+import { RedactionPanel } from "../components/RedactionPanel";
+import {
+  createConversation,
+  deleteConversation,
+  listConversations,
+  resolveRedactions,
+  streamMessage,
+  type ChatMessage,
+  type Conversation,
+} from "../lib/chat";
+
+export default function ChatPage() {
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState("");
+  const [attachments, setAttachments] = useState<string[]>([]);
+  const [dragOver, setDragOver] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const MAX_IMAGES = 6;
+  const MAX_BYTES = 5 * 1024 * 1024;
+
+  function readFiles(files: FileList | File[]) {
+    const imgs = Array.from(files).filter((f) => f.type.startsWith("image/"));
+    for (const f of imgs) {
+      if (f.size > MAX_BYTES) {
+        setError(`Bild zu groß (max 5 MB): ${f.name}`);
+        continue;
+      }
+      const reader = new FileReader();
+      reader.onload = () =>
+        setAttachments((cur) => (cur.length >= MAX_IMAGES ? cur : [...cur, String(reader.result)]));
+      reader.readAsDataURL(f);
+    }
+  }
+
+  useEffect(() => {
+    listConversations().then(setConversations).catch(() => {});
+  }, []);
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages]);
+
+  async function refreshList() {
+    setConversations(await listConversations().catch(() => []));
+  }
+
+  function newChat() {
+    setConversationId(null);
+    setMessages([]);
+    setError(null);
+  }
+
+  async function send() {
+    const text = input.trim();
+    const images = attachments;
+    if ((!text && images.length === 0) || busy) return;
+    setError(null);
+    setInput("");
+    setAttachments([]);
+
+    let convId = conversationId;
+    if (!convId) {
+      convId = await createConversation((text || "Bild").slice(0, 40)).catch((e) => {
+        setError(String(e));
+        return null;
+      });
+      if (!convId) return;
+      setConversationId(convId);
+      void refreshList();
+    }
+
+    const userMsg: ChatMessage = { role: "user", content: text, ...(images.length ? { images } : {}) };
+    const history = [...messages, userMsg];
+    setMessages([...history, { role: "assistant", content: "" }]);
+    setBusy(true);
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+
+    try {
+      await streamMessage(
+        convId,
+        history.map((m) => ({ role: m.role, content: m.content, ...(m.images ? { images: m.images } : {}) })),
+        {
+          signal: ctrl.signal,
+          onShield: (shield) =>
+            setMessages((cur) => {
+              const copy = [...cur];
+              // Reconstruct values LOCALLY from the author's own input.
+              const redactions = resolveRedactions(shield, text);
+              copy[copy.length - 1] = {
+                ...copy[copy.length - 1]!,
+                protection: { entities: shield.entities, perType: shield.perType, redactions, imageEntities: shield.imageEntities ?? 0 },
+              };
+              return copy;
+            }),
+          onToken: (token) =>
+            setMessages((cur) => {
+              const copy = [...cur];
+              const last = copy[copy.length - 1]!;
+              copy[copy.length - 1] = { ...last, content: last.content + token };
+              return copy;
+            }),
+        },
+      );
+    } catch (e) {
+      if ((e as Error).name !== "AbortError") setError(String((e as Error).message ?? e));
+    } finally {
+      setBusy(false);
+      abortRef.current = null;
+    }
+  }
+
+  function stop() {
+    abortRef.current?.abort();
+  }
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "290px 1fr", height: "100vh", gap: 0 }}>
+      {/* Sidebar (glass surface) */}
+      <aside className="glass" style={{ margin: 12, borderRadius: "var(--radius-xl)", padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <strong style={{ fontSize: 15 }}>🛡 Company Chat</strong>
+          <ThemeToggle />
+        </div>
+        <button
+          onClick={newChat}
+          className="transition"
+          style={{ padding: "10px 12px", borderRadius: 12, border: "none", background: "var(--accent)", color: "var(--accent-contrast)", fontWeight: 600 }}
+        >
+          + Neuer Chat
+        </button>
+        <div style={{ overflowY: "auto", display: "flex", flexDirection: "column", gap: 4, flex: 1 }}>
+          {conversations.map((c) => (
+            <div
+              key={c.id}
+              className="transition"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "8px 10px",
+                borderRadius: 10,
+                cursor: "pointer",
+                background: c.id === conversationId ? "var(--surface-glass-strong)" : "transparent",
+                border: "1px solid transparent",
+              }}
+              onClick={() => {
+                setConversationId(c.id);
+                setMessages([]);
+              }}
+            >
+              <span style={{ fontSize: 13.5, color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {c.title || "Ohne Titel"}
+              </span>
+              <button
+                aria-label="Delete conversation"
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  await deleteConversation(c.id);
+                  if (c.id === conversationId) newChat();
+                  void refreshList();
+                }}
+                style={{ border: "none", background: "transparent", color: "var(--text-secondary)" }}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+        <p style={{ fontSize: 11.5, color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>
+          Personenbezogene Daten werden erkannt und ersetzt, bevor sie den Anbieter erreichen.
+        </p>
+      </aside>
+
+      {/* Main column */}
+      <main style={{ display: "flex", flexDirection: "column", height: "100vh", padding: "12px 12px 12px 0" }}>
+        <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "16px 8px" }}>
+          <div style={{ maxWidth: 760, margin: "0 auto", display: "flex", flexDirection: "column", gap: 16 }}>
+            {messages.length === 0 && (
+              <div style={{ textAlign: "center", color: "var(--text-secondary)", marginTop: 80 }}>
+                <div style={{ fontSize: 40, marginBottom: 8 }}>🛡</div>
+                <h1 style={{ fontSize: 22, margin: "0 0 6px", color: "var(--text-primary)" }}>Wie kann ich helfen?</h1>
+                <p style={{ margin: 0, fontSize: 14 }}>Schreiben Sie normal — Namen, IBANs & Co. bleiben geschützt.</p>
+              </div>
+            )}
+            {messages.map((m, i) => (
+              <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start" }}>
+                <div
+                  className={m.role === "assistant" ? "glass" : "transition"}
+                  style={{
+                    maxWidth: "85%",
+                    padding: "12px 15px",
+                    borderRadius: "var(--radius-lg)",
+                    background: m.role === "user" ? "var(--accent)" : undefined,
+                    color: m.role === "user" ? "var(--accent-contrast)" : "var(--text-primary)",
+                    whiteSpace: "pre-wrap",
+                    lineHeight: 1.55,
+                    fontSize: 14.5,
+                  }}
+                >
+                  {m.images && m.images.length > 0 && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: m.content ? 8 : 0 }}>
+                      {m.images.map((src, k) => (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img key={k} src={src} alt="Anhang" style={{ maxWidth: 180, maxHeight: 180, borderRadius: 10, display: "block" }} />
+                      ))}
+                    </div>
+                  )}
+                  {m.content || (m.role === "assistant" && busy ? "…" : "")}
+                  {m.role === "assistant" && m.protection && <RedactionPanel protection={m.protection} />}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {error && (
+          <div style={{ maxWidth: 760, margin: "0 auto 8px", color: "#c0392b", fontSize: 13 }}>⚠ {error}</div>
+        )}
+
+        {/* Composer (glass surface) — supports drag/drop + paste of images */}
+        <div
+          className="glass transition"
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragOver(true);
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOver(false);
+            if (e.dataTransfer.files?.length) readFiles(e.dataTransfer.files);
+          }}
+          style={{
+            maxWidth: 760,
+            margin: "0 auto",
+            width: "100%",
+            borderRadius: "var(--radius-xl)",
+            padding: 8,
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+            outline: dragOver ? "2px dashed var(--accent)" : "none",
+            outlineOffset: -4,
+          }}
+        >
+          {attachments.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: "4px 6px 0" }}>
+              {attachments.map((src, i) => (
+                <div key={i} style={{ position: "relative" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={src} alt="Vorschau" style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 8, border: "1px solid var(--border-glass)" }} />
+                  <button
+                    aria-label="Entfernen"
+                    onClick={() => setAttachments((cur) => cur.filter((_, k) => k !== i))}
+                    style={{ position: "absolute", top: -6, right: -6, width: 18, height: 18, borderRadius: 999, border: "none", background: "rgba(0,0,0,0.7)", color: "#fff", fontSize: 11, lineHeight: "18px", padding: 0 }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              multiple
+              hidden
+              onChange={(e) => {
+                if (e.target.files) readFiles(e.target.files);
+                e.target.value = "";
+              }}
+            />
+            <button
+              aria-label="Bild anhängen"
+              onClick={() => fileRef.current?.click()}
+              className="transition"
+              style={{ width: 40, height: 40, borderRadius: 12, border: "1px solid var(--border-glass)", background: "transparent", color: "var(--text-primary)", fontSize: 17, flexShrink: 0 }}
+            >
+              📎
+            </button>
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onPaste={(e) => {
+                const imgs = Array.from(e.clipboardData.files).filter((f) => f.type.startsWith("image/"));
+                if (imgs.length) {
+                  e.preventDefault();
+                  readFiles(imgs);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  void send();
+                }
+              }}
+              placeholder="Nachricht schreiben oder Bild einfügen…"
+              rows={1}
+              style={{ flex: 1, resize: "none", maxHeight: 160, border: "none", background: "transparent", outline: "none", padding: "10px 12px", fontSize: 14.5 }}
+            />
+            {busy ? (
+              <button onClick={stop} className="transition" style={{ padding: "10px 16px", borderRadius: 12, border: "1px solid var(--border-glass)", background: "transparent", color: "var(--text-primary)", flexShrink: 0 }}>
+                Stopp
+              </button>
+            ) : (
+              <button
+                onClick={() => void send()}
+                disabled={!input.trim() && attachments.length === 0}
+                className="transition"
+                style={{ padding: "10px 18px", borderRadius: 12, border: "none", background: "var(--accent)", color: "var(--accent-contrast)", fontWeight: 600, opacity: input.trim() || attachments.length ? 1 : 0.5, flexShrink: 0 }}
+              >
+                Senden
+              </button>
+            )}
+          </div>
+          {attachments.length > 0 && (
+            <p style={{ fontSize: 10.5, color: "var(--text-secondary)", margin: "0 6px", lineHeight: 1.4 }}>
+              ⚠ Bildinhalte werden derzeit nicht auf personenbezogene Daten geprüft (nur Text).
+            </p>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}

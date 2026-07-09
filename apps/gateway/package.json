@@ -1,0 +1,33 @@
+{
+  "name": "@gdpr/gateway",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "echo 'gateway runs from TS via tsx (no emit)'",
+    "start": "tsx src/index.ts",
+    "migrate": "node ../../infra/migrations/migrate.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "echo 'lint: gateway'",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@fastify/cors": "^10.0.1",
+    "@gdpr/shared": "workspace:*",
+    "@gdpr/stream-unredactor": "workspace:*",
+    "fastify": "^5.1.0",
+    "ioredis": "^5.4.1",
+    "pg": "^8.13.1",
+    "undici": "^6.21.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "@types/pg": "^8.11.10",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  }
+}
