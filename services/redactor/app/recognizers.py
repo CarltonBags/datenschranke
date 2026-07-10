@@ -1,11 +1,13 @@
 """Custom German PatternRecognizers — ONLY for gaps not covered upstream.
 
-Do NOT reimplement recognizers that ship in Presidio's German set (Steuer-IdNr,
-Steuernummer, Reisepassnummer, Personalausweisnummer, Rentenversicherungsnummer,
-Krankenversicherungsnummer) — those are enabled in analyzer.py instead.
+Presidio's German built-in set (Reisepass, Personalausweis, Rentenversicherung,
+Krankenversicherung) is enabled in analyzer.py when present. Steuernummer and
+Steuer-IdNr are ALSO expected upstream, but are absent in the pinned Presidio
+version — so they are provided here as gaps until the built-ins are available.
 
 Built here (upstream gaps): Handelsregisternummer (HRB/HRA + court), USt-IdNr
-(DE + 9 digits with checksum), EU driving licence number.
+(DE + 9 digits with checksum), Steuernummer (Finanzamt slash format), Steuer-IdNr
+(11 digits, context-gated), EU driving licence number.
 """
 from __future__ import annotations
 
@@ -53,6 +55,36 @@ def handelsregister_recognizer() -> PatternRecognizer:
     )
 
 
+def steuernummer_recognizer() -> PatternRecognizer:
+    """German Steuernummer in the common Finanzamt slash format (e.g.
+    12/345/67890). The distinctive three-group shape carries enough signal to
+    redact standalone (score above min_confidence); context words boost it.
+
+    NOTE: intended to be covered by Presidio's German built-in set, but that set
+    is absent in the pinned version — so we provide it here as an upstream gap.
+    """
+    return PatternRecognizer(
+        supported_entity="DE_STEUERNUMMER",
+        name="SteuernummerRecognizer",
+        supported_language="de",
+        patterns=[Pattern("steuernummer_slash", r"\b\d{2,3}/\d{3}/\d{4,5}\b", 0.65)],
+        context=["steuernummer", "steuer-nr", "st.-nr", "stnr", "finanzamt", "steuer"],
+    )
+
+
+def steuer_id_recognizer() -> PatternRecognizer:
+    """Steuerliche Identifikationsnummer (IdNr): 11 digits, optionally grouped.
+    Bare 11-digit numbers are too ambiguous to auto-redact, so this scores low
+    and relies on context words to cross min_confidence."""
+    return PatternRecognizer(
+        supported_entity="DE_STEUER_ID",
+        name="SteuerIdRecognizer",
+        supported_language="de",
+        patterns=[Pattern("steuer_id", r"\b\d{2}[ .]?\d{3}[ .]?\d{3}[ .]?\d{3}\b", 0.3)],
+        context=["identifikationsnummer", "steuer-id", "steuerliche", "idnr", "steuer-idnr"],
+    )
+
+
 def eu_driving_licence_recognizer() -> PatternRecognizer:
     """Simplified EU driving licence number (DE format B + 10 alnum)."""
     return PatternRecognizer(
@@ -68,5 +100,7 @@ def german_gap_recognizers() -> list[PatternRecognizer]:
     return [
         UstIdNrRecognizer(),
         handelsregister_recognizer(),
+        steuernummer_recognizer(),
+        steuer_id_recognizer(),
         eu_driving_licence_recognizer(),
     ]

@@ -117,10 +117,17 @@ export async function handleChat(ctx: ChatContext, reply: FastifyReply): Promise
   // entity TYPES/COUNTS only. Comment lines are ignored by strict OpenAI clients
   // but read by our chat UI to render the per-message shield. Never values.
   if (ctx.product === "chat") {
+    // The shield describes what was protected in the USER'S LATEST message — the
+    // thing they just typed — so the count matches the reconstructed list. The
+    // full-request entityCount (which also re-redacts resent history + the prior
+    // assistant reply) would inflate this and confuse the user. perType is
+    // derived from the same spans that produce the list.
+    const lastPerType: Record<string, number> = {};
+    for (const s of stats.lastUserSpans) lastPerType[s.type] = (lastPerType[s.type] ?? 0) + 1;
     raw.write(
       `: shield ${JSON.stringify({
-        entities: stats.entityCount,
-        perType: stats.perType,
+        entities: stats.lastUserSpans.length,
+        perType: lastPerType,
         // Offsets into the user's OWN latest message — no values on the wire.
         spans: stats.lastUserSpans,
         imageEntities: stats.imageEntities,
