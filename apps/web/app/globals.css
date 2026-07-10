@@ -4,8 +4,10 @@
    fallbacks, reduced-motion / reduced-transparency respected. */
 
 :root {
-  --accent: #4f6bed;
+  --accent: #5b63f0;
+  --accent-2: #8b5cf6;
   --accent-contrast: #ffffff;
+  --accent-glow: rgba(99, 91, 240, 0.45);
   --radius-lg: 16px;
   --radius-xl: 22px;
   --transition: 180ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -209,6 +211,28 @@ html, body {
 
 button { font: inherit; cursor: pointer; }
 input, textarea { font: inherit; color: inherit; }
+
+/* Slick gradient send button with a soft accent glow + press feedback. */
+.send-btn {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: 0 4px 16px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.send-btn:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); box-shadow: 0 6px 22px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.3); }
+.send-btn:active:not(:disabled) { transform: translateY(0) scale(0.96); }
+.send-btn:disabled { background: var(--surface-glass-strong); color: var(--text-secondary) !important; box-shadow: none; cursor: default; }
+
+/* Ghost icon button: invisible until hover, then a faint frosted fill. */
+.icon-ghost:hover { background: var(--surface-glass-strong) !important; color: var(--text-primary) !important; }
+.icon-ghost:active { transform: scale(0.94); }
+
+/* Primary pill (New chat): gradient, subtle glow, lift on hover. */
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: var(--accent-contrast);
+  box-shadow: 0 4px 16px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+.btn-primary:hover { filter: brightness(1.07); transform: translateY(-1px); }
+.btn-primary:active { transform: translateY(0) scale(0.98); }
 
 /* Markdown (assistant messages) */
 .md > :first-child { margin-top: 0; }

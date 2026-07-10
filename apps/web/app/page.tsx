@@ -5,6 +5,7 @@ import { ThemeToggle } from "../components/ThemeToggle";
 import { RedactionPanel } from "../components/RedactionPanel";
 import { ShieldIcon } from "../components/ShieldIcon";
 import { Markdown } from "../components/Markdown";
+import { ImagePlus, ArrowUp, StopSquare } from "../components/Icons";
 import {
   createConversation,
   deleteConversation,
@@ -150,8 +151,8 @@ export default function ChatPage() {
         </div>
         <button
           onClick={newChat}
-          className="transition"
-          style={{ padding: "10px 12px", borderRadius: 12, border: "none", background: "var(--accent)", color: "var(--accent-contrast)", fontWeight: 600 }}
+          className="transition btn-primary"
+          style={{ padding: "10px 12px", borderRadius: 12, border: "none", fontWeight: 600 }}
         >
           + Neuer Chat
         </button>
@@ -319,10 +320,10 @@ export default function ChatPage() {
             <button
               aria-label="Bild anhängen"
               onClick={() => fileRef.current?.click()}
-              className="transition"
-              style={{ width: 40, height: 40, borderRadius: 12, border: "1px solid var(--border-glass)", background: "transparent", color: "var(--text-primary)", fontSize: 17, flexShrink: 0 }}
+              className="transition icon-ghost"
+              style={{ width: 40, height: 40, borderRadius: 12, border: "none", background: "transparent", color: "var(--text-secondary)", display: "grid", placeItems: "center", flexShrink: 0 }}
             >
-              📎
+              <ImagePlus size={20} />
             </button>
             <textarea
               value={input}
@@ -345,17 +346,23 @@ export default function ChatPage() {
               style={{ flex: 1, resize: "none", maxHeight: 160, border: "none", background: "transparent", outline: "none", padding: "10px 12px", fontSize: 14.5 }}
             />
             {busy ? (
-              <button onClick={stop} className="transition" style={{ padding: "10px 16px", borderRadius: 12, border: "1px solid var(--border-glass)", background: "transparent", color: "var(--text-primary)", flexShrink: 0 }}>
-                Stopp
+              <button
+                aria-label="Stopp"
+                onClick={stop}
+                className="transition icon-ghost"
+                style={{ width: 40, height: 40, borderRadius: 999, border: "1px solid var(--border-glass)", background: "transparent", color: "var(--text-primary)", display: "grid", placeItems: "center", flexShrink: 0 }}
+              >
+                <StopSquare size={18} />
               </button>
             ) : (
               <button
+                aria-label="Senden"
                 onClick={() => void send()}
                 disabled={!input.trim() && attachments.length === 0}
-                className="transition"
-                style={{ padding: "10px 18px", borderRadius: 12, border: "none", background: "var(--accent)", color: "var(--accent-contrast)", fontWeight: 600, opacity: input.trim() || attachments.length ? 1 : 0.5, flexShrink: 0 }}
+                className="transition send-btn"
+                style={{ width: 40, height: 40, borderRadius: 999, border: "none", color: "#fff", display: "grid", placeItems: "center", flexShrink: 0 }}
               >
-                Senden
+                <ArrowUp size={20} />
               </button>
             )}
           </div>
