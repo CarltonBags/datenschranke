@@ -9,6 +9,7 @@ import { withTenant } from "./db.js";
 import { prepareOutbound, buildResolveFn, type ChatContext } from "./pipeline.js";
 import { forwardChat } from "./providers.js";
 import { writeAudit, auditEvent } from "./audit.js";
+import { persistMessages } from "./conversations.js";
 import { RedactorUnavailableError } from "./redactorClient.js";
 
 export interface ChatOutcome {
@@ -81,8 +82,10 @@ export async function handleChat(ctx: ChatContext, reply: FastifyReply): Promise
     };
     let replaced = 0;
     let unknown = 0;
+    let assistantRedacted = "";
     for (const choice of json.choices ?? []) {
       if (typeof choice.message?.content === "string") {
+        if (!assistantRedacted) assistantRedacted = choice.message.content; // pre-unredact
         const out = unredactBody(choice.message.content, resolve);
         choice.message.content = out.text;
         replaced += out.stats.replaced;
@@ -100,6 +103,7 @@ export async function handleChat(ctx: ChatContext, reply: FastifyReply): Promise
         }, ctx.conversationId),
       ),
     );
+    await persistChatTurn(ctx, stats.lastUserRedacted, assistantRedacted);
     reply.code(providerRes.statusCode).send(json);
     return;
   }
@@ -147,8 +151,13 @@ export async function handleChat(ctx: ChatContext, reply: FastifyReply): Promise
     }
   })();
 
+  // Accumulate the RAW provider SSE (redacted, placeholders only) so we can
+  // persist the assistant reply for reload — never the un-redacted text.
+  let providerRaw = "";
+  const dec = new TextDecoder();
   try {
     for await (const chunk of providerRes.body) {
+      providerRaw += dec.decode(chunk as Buffer, { stream: true });
       await writer.write(new Uint8Array(chunk as Buffer));
     }
   } finally {
@@ -169,4 +178,38 @@ export async function handleChat(ctx: ChatContext, reply: FastifyReply): Promise
       }, ctx.conversationId),
     ),
   );
+  await persistChatTurn(ctx, stats.lastUserRedacted, extractAssistantFromSSE(providerRaw));
+}
+
+/** Persist one chat turn (redacted user + assistant). Product A only — the proxy
+ *  is stateless. Best-effort: a persistence failure must not fail the response. */
+async function persistChatTurn(ctx: ChatContext, userRedacted: string, assistantRedacted: string): Promise<void> {
+  if (ctx.product !== "chat") return;
+  const entries: Array<{ role: "user" | "assistant"; content: string }> = [];
+  if (userRedacted) entries.push({ role: "user", content: userRedacted });
+  if (assistantRedacted) entries.push({ role: "assistant", content: assistantRedacted });
+  if (entries.length === 0) return;
+  try {
+    await withTenant(ctx.tenantId, (db) => persistMessages(db, ctx.conversationId, entries));
+  } catch {
+    /* persistence is best-effort; reload history may miss this turn */
+  }
+}
+
+/** Extract the assistant's REDACTED text from accumulated OpenAI SSE (delta.content). */
+function extractAssistantFromSSE(raw: string): string {
+  let out = "";
+  for (const line of raw.split("\n")) {
+    if (!line.startsWith("data:")) continue;
+    const payload = line.slice(5).trim();
+    if (payload === "" || payload === "[DONE]") continue;
+    try {
+      const obj = JSON.parse(payload) as { choices?: Array<{ delta?: { content?: string } }> };
+      const c = obj.choices?.[0]?.delta?.content;
+      if (c) out += c;
+    } catch {
+      /* ignore keep-alives / non-JSON */
+    }
+  }
+  return out;
 }

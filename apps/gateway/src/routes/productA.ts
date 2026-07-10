@@ -10,9 +10,10 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { openaiChatMessageSchema } from "@gdpr/shared";
+import { unredactBody } from "@gdpr/stream-unredactor";
 import { withTenant } from "../db.js";
-import { ensureConversation, listConversations } from "../conversations.js";
-import { deleteConversation } from "../vault.js";
+import { ensureConversation, listConversations, loadMessages } from "../conversations.js";
+import { deleteConversation, resolverMap } from "../vault.js";
 import { writeAudit, auditEvent } from "../audit.js";
 import { handleChat } from "../chatCore.js";
 import type { ChatContext } from "../pipeline.js";
@@ -50,6 +51,22 @@ export async function productARoutes(app: FastifyInstance): Promise<void> {
     if (!p) return reply.code(401).send({ error: "unauthenticated" });
     const rows = await withTenant(p.tenantId, (db) => listConversations(db));
     return reply.send({ conversations: rows });
+  });
+
+  // Reload a conversation's history. Stored content is REDACTED; we un-redact it
+  // here for the authoring tenant using the encrypted token map (same resolver as
+  // the streaming response). Only the tenant's own conversation is accessible (RLS).
+  app.get("/api/conversations/:id/messages", async (req, reply) => {
+    const p = principalFromHeaders(req);
+    if (!p) return reply.code(401).send({ error: "unauthenticated" });
+    const id = (req.params as { id: string }).id;
+    const messages = await withTenant(p.tenantId, async (db) => {
+      const rows = await loadMessages(db, id);
+      const map = await resolverMap(db, p.tenantId, id);
+      const resolve = (placeholder: string) => map.get(placeholder);
+      return rows.map((r) => ({ role: r.role, content: unredactBody(r.content_redacted, resolve).text }));
+    });
+    return reply.send({ messages });
   });
 
   app.delete("/api/conversations/:id", async (req, reply) => {

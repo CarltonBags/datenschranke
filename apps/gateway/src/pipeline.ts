@@ -45,6 +45,8 @@ export interface RedactionStats {
   perType: Record<string, number>;
   newEntries: number;
   lastUserSpans: RedactionSpan[];
+  /** Redacted text of the latest user message (placeholders only) — persisted. */
+  lastUserRedacted: string;
   /** PII regions boxed out of uploaded images (destructive, no round-trip). */
   imageEntities: number;
 }
@@ -77,6 +79,7 @@ export async function prepareOutbound(db: Db, ctx: ChatContext): Promise<Prepare
   let entityCount = 0;
   let imageEntities = 0;
   let lastUserSpans: RedactionSpan[] = [];
+  let lastUserRedacted = "";
 
   for (const msg of ctx.messages) {
     // ---- Image redaction (destructive OCR box-out), fail closed --------------
@@ -133,7 +136,8 @@ export async function prepareOutbound(db: Db, ctx: ChatContext): Promise<Prepare
       labelByPlaceholder.set(ne.placeholder, ne.custom_label);
       existing.push({ value_hash: matchHash(ne.entity_type, ne.value), placeholder: ne.placeholder, type: ne.entity_type });
     }
-    // Transparency: remember the newest user message's spans (offsets only).
+    // Transparency: remember the newest user message's spans (offsets only)
+    // and its redacted text (for persistence — placeholders only, no PII).
     if (msg.role === "user") {
       lastUserSpans = result.entities.map((e) => ({
         placeholder: e.placeholder,
@@ -142,6 +146,7 @@ export async function prepareOutbound(db: Db, ctx: ChatContext): Promise<Prepare
         end: e.end,
         custom_label: labelByPlaceholder.get(e.placeholder) ?? null,
       }));
+      lastUserRedacted = result.redacted_text;
     }
     redactedMessages.push({ ...msg, content: result.redacted_text, ...(redactedImages ? { images: redactedImages } : {}) });
   }
@@ -161,7 +166,7 @@ export async function prepareOutbound(db: Db, ctx: ChatContext): Promise<Prepare
     outbound,
     provider: chooseProvider(policy.allowed_providers),
     policy,
-    stats: { entityCount, perType, newEntries: collectedNew.length, lastUserSpans, imageEntities },
+    stats: { entityCount, perType, newEntries: collectedNew.length, lastUserSpans, lastUserRedacted, imageEntities },
   };
 }
 

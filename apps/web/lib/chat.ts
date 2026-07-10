@@ -74,6 +74,15 @@ export async function deleteConversation(id: string): Promise<void> {
   await fetch(`/api/gw/conversations/${id}`, { method: "DELETE" });
 }
 
+/** Load a conversation's persisted history (server un-redacts for the author).
+ *  No protection/shield metadata on reload — that's live-only. */
+export async function fetchMessages(id: string): Promise<ChatMessage[]> {
+  const res = await fetch(`/api/gw/conversations/${id}/messages`, { cache: "no-store" });
+  if (!res.ok) return [];
+  const data = (await res.json()) as { messages: Array<{ role: "user" | "assistant"; content: string }> };
+  return (data.messages ?? []).map((m) => ({ role: m.role, content: m.content }));
+}
+
 /**
  * Stream one assistant turn. Parses OpenAI SSE deltas AND our `: shield` comment
  * line. `onToken` is called with incremental text; `onShield` once with stats.

@@ -9,6 +9,7 @@ import { ImagePlus, ArrowUp, StopSquare } from "../components/Icons";
 import {
   createConversation,
   deleteConversation,
+  fetchMessages,
   listConversations,
   resolveRedactions,
   streamMessage,
@@ -31,6 +32,9 @@ export default function ChatPage() {
   // Per-conversation message history, in-memory for THIS session only. Message
   // text is never persisted server-side (raw PII) nor in localStorage (spec).
   const convStore = useRef<Record<string, ChatMessage[]>>({});
+  // The conversation the UI is currently showing — used to ignore a late async
+  // history fetch if the user has already switched away.
+  const activeRef = useRef<string | null>(null);
 
   const MAX_IMAGES = 6;
   const MAX_BYTES = 5 * 1024 * 1024;
@@ -62,19 +66,27 @@ export default function ChatPage() {
 
   function newChat() {
     if (conversationId) convStore.current[conversationId] = messages;
+    activeRef.current = null;
     setConversationId(null);
     setMessages([]);
     setError(null);
   }
 
   // Switch to an existing conversation: stash the current one, restore the target
-  // from the in-memory store (empty if it wasn't opened this session).
-  function openConversation(id: string) {
+  // from the in-memory store, or fetch its persisted history from the server
+  // (server un-redacts for the author). Survives a full page reload.
+  async function openConversation(id: string) {
     if (id === conversationId) return;
     if (conversationId) convStore.current[conversationId] = messages;
+    activeRef.current = id;
     setConversationId(id);
-    setMessages(convStore.current[id] ?? []);
     setError(null);
+    const cached = convStore.current[id];
+    if (cached) { setMessages(cached); return; }
+    setMessages([]);
+    const loaded = await fetchMessages(id).catch(() => []);
+    convStore.current[id] = loaded;
+    if (activeRef.current === id) setMessages(loaded); // ignore if user switched away
   }
 
   async function send() {
@@ -95,6 +107,7 @@ export default function ChatPage() {
       setConversationId(convId);
       void refreshList();
     }
+    activeRef.current = convId;
 
     const userMsg: ChatMessage = { role: "user", content: text, ...(images.length ? { images } : {}) };
     const history = [...messages, userMsg];

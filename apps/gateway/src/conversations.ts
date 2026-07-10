@@ -26,3 +26,38 @@ export async function listConversations(db: Db): Promise<Array<{ id: string; tit
   );
   return res.rows;
 }
+
+/** Append messages (REDACTED content only — placeholders, never raw PII) to a
+ *  conversation so it can reload after a browser refresh. Product A only. */
+export async function persistMessages(
+  db: Db,
+  conversationId: string,
+  entries: Array<{ role: "user" | "assistant"; content: string }>,
+): Promise<void> {
+  if (entries.length === 0) return;
+  const res = await db.query<{ next: number }>(
+    "SELECT COALESCE(MAX(seq) + 1, 0) AS next FROM messages WHERE conversation_id = $1",
+    [conversationId],
+  );
+  let seq = res.rows[0]?.next ?? 0;
+  for (const e of entries) {
+    await db.query(
+      `INSERT INTO messages (tenant_id, conversation_id, role, content_redacted, seq)
+       VALUES (current_setting('app.tenant_id')::uuid, $1, $2, $3, $4)`,
+      [conversationId, e.role, e.content, seq],
+    );
+    seq += 1;
+  }
+}
+
+/** Load a conversation's messages (redacted). Caller un-redacts for the author. */
+export async function loadMessages(
+  db: Db,
+  conversationId: string,
+): Promise<Array<{ role: string; content_redacted: string }>> {
+  const res = await db.query<{ role: string; content_redacted: string }>(
+    "SELECT role, content_redacted FROM messages WHERE conversation_id = $1 ORDER BY seq ASC",
+    [conversationId],
+  );
+  return res.rows;
+}
