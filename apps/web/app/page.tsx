@@ -211,7 +211,10 @@ export default function ChatPage() {
           <span style={{ opacity: 0.55, fontWeight: 400 }}>· geschützt</span>
         </div>
         <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "48px 8px 16px" }}>
-          <div style={{ maxWidth: 760, margin: "0 auto", display: "flex", flexDirection: "column", gap: 16 }}>
+          <div
+            className="glass"
+            style={{ maxWidth: 760, margin: "0 auto", borderRadius: "var(--radius-xl)", padding: "20px 20px 24px", display: "flex", flexDirection: "column", gap: 16, minHeight: "min(100%, 520px)" }}
+          >
             {messages.length === 0 && (
               <div style={{ textAlign: "center", color: "var(--text-secondary)", marginTop: 90 }}>
                 <div style={{ display: "inline-flex", color: "var(--shield)", marginBottom: 12, opacity: 0.9 }}>

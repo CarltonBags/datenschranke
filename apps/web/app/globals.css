@@ -151,13 +151,13 @@ html, body {
 }
 .glass-strong { background: var(--surface-glass-strong); }
 
-/* Almost-see-through grainy glass for chat message bubbles. */
+/* Chat bubbles sit INSIDE the glass thread panel, so they don't carry their own
+   backdrop-filter (spec: blur only on a few large surfaces). Subtle tint + border
+   + grain to read as layered frosted cards on the panel. */
 .msg-glass {
   position: relative;
   border: 1px solid var(--border-glass);
-  backdrop-filter: blur(18px) saturate(135%);
-  -webkit-backdrop-filter: blur(18px) saturate(135%);
-  box-shadow: 0 6px 22px rgba(30, 20, 40, 0.08);
+  box-shadow: 0 4px 16px rgba(30, 20, 40, 0.06);
 }
 .msg-glass::after {
   content: "";
@@ -172,9 +172,10 @@ html, body {
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .msg-glass { background: var(--surface); }
 }
-/* Assistant bubble: neutral faint glass. User bubble: faint accent tint. */
-.msg-assistant { background: color-mix(in srgb, var(--surface-glass) 70%, transparent); }
-.msg-user { background: color-mix(in srgb, var(--accent) 20%, var(--surface-glass)); }
+/* Assistant bubble: near-transparent, lets the panel show through. User bubble:
+   faint accent tint so the two speakers read distinctly on the same panel. */
+.msg-assistant { background: var(--surface-glass-strong); }
+.msg-user { background: color-mix(in srgb, var(--accent) 26%, var(--surface-glass-strong)); }
 
 /* Warmwind-style top notch — a small floating glass pill, centered. */
 .notch {
