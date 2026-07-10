@@ -51,13 +51,16 @@ export async function destroySession(token: string | undefined): Promise<void> {
   if (token) await redis.del(keyOf(token));
 }
 
-/** Invalidate every session for a user (e.g. on disable/delete). Best-effort scan. */
-export async function destroyUserSessions(userId: string): Promise<void> {
+/** Invalidate a user's sessions (e.g. on disable/delete or password change).
+ *  Optionally keep one token alive (the caller's current session). Best-effort. */
+export async function destroyUserSessions(userId: string, exceptToken?: string): Promise<void> {
+  const keep = exceptToken ? keyOf(exceptToken) : null;
   let cursor = "0";
   do {
     const [next, keys] = await redis.scan(cursor, "MATCH", "sess:*", "COUNT", 200);
     cursor = next;
     for (const k of keys) {
+      if (k === keep) continue;
       const raw = await redis.get(k);
       if (raw && (JSON.parse(raw) as SessionData).userId === userId) await redis.del(k);
     }

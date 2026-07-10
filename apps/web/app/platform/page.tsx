@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { me, logout } from "../../lib/auth";
+import { ChangePassword } from "../../components/ChangePassword";
 import { ThemeToggle } from "../../components/ThemeToggle";
 
 interface Tenant {
@@ -100,6 +101,7 @@ export default function PlatformPage() {
             <button onClick={() => setTab("users")} className="transition" style={pill(tab === "users")}>Alle Benutzer</button>
           </div>
           <div style={{ flex: 1 }} />
+          <ChangePassword trigger="button" />
           <button onClick={async () => { await logout(); router.push("/login"); }} className="transition" style={{ fontSize: 13, color: "var(--text-secondary)", border: "1px solid var(--border-glass)", background: "transparent", borderRadius: 8, padding: "4px 10px" }}>Abmelden</button>
           <ThemeToggle />
         </div>

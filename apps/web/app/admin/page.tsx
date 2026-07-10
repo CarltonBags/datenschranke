@@ -14,6 +14,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { me, logout } from "../../lib/auth";
 import { ThemeToggle } from "../../components/ThemeToggle";
+import { ChangePassword } from "../../components/ChangePassword";
 import { CustomEntities } from "../../components/CustomEntities";
 import { UserManagement } from "../../components/UserManagement";
 
@@ -140,6 +141,7 @@ export default function AdminPage() {
           </div>
           <div style={{ flex: 1 }} />
           <a href="/" style={{ fontSize: 13, color: "var(--text-secondary)", textDecoration: "none" }}>← Chat</a>
+          <ChangePassword trigger="button" />
           <button onClick={async () => { await logout(); router.push("/login"); }} className="transition" style={{ fontSize: 13, color: "var(--text-secondary)", border: "1px solid var(--border-glass)", background: "transparent", borderRadius: 8, padding: "4px 10px" }}>Abmelden</button>
           <ThemeToggle />
         </div>

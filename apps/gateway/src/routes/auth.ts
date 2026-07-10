@@ -1,9 +1,9 @@
 /** Built-in email+password auth. Sessions live in Redis (opaque token). */
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { findUserByEmail, licenseValid } from "../accounts.js";
-import { verifyPassword } from "../password.js";
-import { createSession, destroySession, getSession } from "../sessions.js";
+import { findUserByEmail, getUserById, updatePassword, licenseValid } from "../accounts.js";
+import { verifyPassword, hashPassword } from "../password.js";
+import { createSession, destroySession, getSession, destroyUserSessions } from "../sessions.js";
 import { sessionToken } from "../principal.js";
 import { withTenant } from "../db.js";
 import { writeAudit, auditEvent } from "../audit.js";
@@ -54,5 +54,27 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     const s = await getSession(sessionToken(req));
     if (!s) return reply.code(401).send({ error: "unauthenticated" });
     return reply.send({ user: { id: s.userId, email: s.email, role: s.role, tenantId: s.tenantId } });
+  });
+
+  const changeBody = z.object({
+    currentPassword: z.string().min(1).max(400),
+    newPassword: z.string().min(8).max(400),
+  });
+  app.post("/api/auth/change-password", async (req, reply) => {
+    const token = sessionToken(req);
+    const s = await getSession(token);
+    if (!s) return reply.code(401).send({ error: "unauthenticated" });
+    const parsed = changeBody.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ error: "Neues Passwort min. 8 Zeichen." });
+
+    const user = await getUserById(s.userId);
+    if (!user) return reply.code(401).send({ error: "unauthenticated" });
+    if (!(await verifyPassword(parsed.data.currentPassword, user.password_hash))) {
+      return reply.code(400).send({ error: "Aktuelles Passwort falsch." });
+    }
+    await updatePassword(s.userId, await hashPassword(parsed.data.newPassword));
+    // Revoke this user's OTHER sessions; keep the current one alive.
+    await destroyUserSessions(s.userId, token);
+    return reply.send({ ok: true });
   });
 }

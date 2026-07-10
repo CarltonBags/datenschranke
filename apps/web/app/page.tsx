@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { me, logout, type Me } from "../lib/auth";
+import { ChangePassword } from "../components/ChangePassword";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { RedactionPanel } from "../components/RedactionPanel";
 import { ShieldIcon } from "../components/ShieldIcon";
@@ -223,15 +224,18 @@ export default function ChatPage() {
             <span aria-hidden>▤</span> Admin-Konsole
           </a>
         )}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, fontSize: 12, color: "var(--text-secondary)", borderTop: "1px solid var(--border-glass)", paddingTop: 10 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 12, color: "var(--text-secondary)", borderTop: "1px solid var(--border-glass)", paddingTop: 10 }}>
           <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.email}</span>
-          <button
-            onClick={async () => { await logout(); router.push("/login"); }}
-            className="transition"
-            style={{ border: "1px solid var(--border-glass)", background: "transparent", color: "var(--text-secondary)", borderRadius: 8, padding: "4px 10px", fontSize: 12, flexShrink: 0 }}
-          >
-            Abmelden
-          </button>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+            <ChangePassword />
+            <button
+              onClick={async () => { await logout(); router.push("/login"); }}
+              className="transition"
+              style={{ border: "1px solid var(--border-glass)", background: "transparent", color: "var(--text-secondary)", borderRadius: 8, padding: "4px 10px", fontSize: 12, flexShrink: 0 }}
+            >
+              Abmelden
+            </button>
+          </div>
         </div>
       </aside>
 

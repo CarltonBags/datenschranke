@@ -44,6 +44,10 @@ export async function getUserById(id: string): Promise<UserRow | null> {
   return r.rows[0] ?? null;
 }
 
+export async function updatePassword(userId: string, passwordHash: string): Promise<void> {
+  await query("UPDATE users SET password_hash = $2 WHERE id = $1", [userId, passwordHash]);
+}
+
 export async function countTenantUsers(tenantId: string): Promise<number> {
   const r = await query<{ n: string }>(
     "SELECT count(*)::text AS n FROM users WHERE tenant_id = $1 AND disabled = false",
