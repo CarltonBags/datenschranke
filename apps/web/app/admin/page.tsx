@@ -12,6 +12,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ThemeToggle } from "../../components/ThemeToggle";
+import { CustomEntities } from "../../components/CustomEntities";
 
 type Payload = Record<string, unknown>;
 interface AuditEvent {
@@ -59,6 +60,7 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [tab, setTab] = useState<"audit" | "entities">("audit");
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(async () => {
@@ -86,9 +88,9 @@ export default function AdminPage() {
   useEffect(() => { void load(); }, [load]);
   useEffect(() => {
     if (timer.current) clearInterval(timer.current);
-    if (live) timer.current = setInterval(() => void load(), 4000);
+    if (live && tab === "audit") timer.current = setInterval(() => void load(), 4000);
     return () => { if (timer.current) clearInterval(timer.current); };
-  }, [live, load]);
+  }, [live, load, tab]);
 
   const stats = useMemo(() => {
     let redacted = 0, blocked = 0, entities = 0, images = 0;
@@ -115,15 +117,20 @@ export default function AdminPage() {
       <header style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", padding: "22px 0 18px", position: "sticky", top: 0, zIndex: 3 }}>
         <div className="glass" style={{ flex: 1, display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", padding: "12px 18px", borderRadius: 16 }}>
           <div style={{ fontWeight: 700, fontSize: 17, letterSpacing: 0.2 }}>Datenschranke</div>
-          <span style={{ fontSize: 12, color: "var(--text-secondary)", border: "1px solid var(--border-glass)", padding: "2px 9px", borderRadius: 999 }}>
-            Admin · Audit-Log
-          </span>
+          <div style={{ display: "inline-flex", gap: 4, padding: 3, borderRadius: 999, border: "1px solid var(--border-glass)" }}>
+            <button onClick={() => setTab("audit")} className="transition" style={tabPill(tab === "audit")}>Audit-Log</button>
+            <button onClick={() => setTab("entities")} className="transition" style={tabPill(tab === "entities")}>Eigene Erkennung</button>
+          </div>
           <div style={{ flex: 1 }} />
           <a href="/" style={{ fontSize: 13, color: "var(--text-secondary)", textDecoration: "none" }}>← Chat</a>
           <ThemeToggle />
         </div>
       </header>
 
+      {tab === "entities" && <CustomEntities />}
+
+      {tab === "audit" && (
+      <>
       {/* Summary cards */}
       <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 16 }}>
         <StatCard label="Ereignisse" value={stats.total} />
@@ -178,6 +185,8 @@ export default function AdminPage() {
         Hinweis: Das Audit-Log speichert ausschließlich Entitätstypen, Platzhalter und Kennzahlen — niemals
         die tatsächlichen personenbezogenen Werte. Diese verlassen die Datenschranke nie.
       </p>
+      </>
+      )}
     </main>
   );
 }
@@ -264,5 +273,17 @@ function pill(active: boolean): React.CSSProperties {
     border: active ? "1px solid color-mix(in srgb, var(--accent) 45%, transparent)" : "1px solid var(--border-glass)",
     background: active ? "color-mix(in srgb, var(--accent) 18%, transparent)" : "var(--surface-glass)",
     color: active ? "var(--accent)" : "var(--text-primary)",
+  };
+}
+
+function tabPill(active: boolean): React.CSSProperties {
+  return {
+    padding: "5px 14px",
+    borderRadius: 999,
+    fontSize: 13,
+    fontWeight: 600,
+    border: "none",
+    background: active ? "color-mix(in srgb, var(--accent) 18%, transparent)" : "transparent",
+    color: active ? "var(--accent)" : "var(--text-secondary)",
   };
 }

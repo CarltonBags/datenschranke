@@ -85,6 +85,87 @@ def steuer_id_recognizer() -> PatternRecognizer:
     )
 
 
+def svnr_recognizer() -> PatternRecognizer:
+    """Sozial-/Rentenversicherungsnummer (SVNR): 12 chars,
+    2 digits + 6-digit birthdate + 1 letter + 3 digits. Structured enough to
+    fire standalone."""
+    return PatternRecognizer(
+        supported_entity="DE_SVNR",
+        name="SvnrRecognizer",
+        supported_language="de",
+        patterns=[Pattern("svnr", r"\b\d{2}\s?\d{6}\s?[A-Za-z]\s?\d{3}\b", 0.6)],
+        context=["sozialversicherung", "rentenversicherung", "sv-nummer", "svnr", "versicherungsnummer"],
+    )
+
+
+def krankenversicherung_recognizer() -> PatternRecognizer:
+    """Krankenversichertennummer (eGK): 1 letter + 9 digits. Ambiguous alone —
+    context-gated."""
+    return PatternRecognizer(
+        supported_entity="DE_KRANKENVERSICHERUNG",
+        name="KrankenversicherungRecognizer",
+        supported_language="de",
+        patterns=[Pattern("kvnr", r"\b[A-Za-z]\d{9}\b", 0.3)],
+        context=["krankenversicherung", "versichertennummer", "krankenkasse", "gkv", "egk"],
+    )
+
+
+def personalausweis_recognizer() -> PatternRecognizer:
+    """Personalausweisnummer (nPA): letter + 8 alnum. Broad shape → context-gated."""
+    return PatternRecognizer(
+        supported_entity="DE_PERSONALAUSWEIS",
+        name="PersonalausweisRecognizer",
+        supported_language="de",
+        patterns=[Pattern("npa", r"\b[LMNPRTVWXYZ][0-9A-Z]{8,9}\b", 0.3)],
+        context=["personalausweis", "ausweisnummer", "ausweis", "perso"],
+    )
+
+
+def reisepass_recognizer() -> PatternRecognizer:
+    """Reisepassnummer: 9 alnum. Broad shape → context-gated."""
+    return PatternRecognizer(
+        supported_entity="DE_REISEPASS",
+        name="ReisepassRecognizer",
+        supported_language="de",
+        patterns=[Pattern("pass", r"\b[CFGHJKLMNPRTVWXYZ0-9]{9}\b", 0.3)],
+        context=["reisepass", "passnummer", "passport", "pass"],
+    )
+
+
+def kfz_recognizer() -> PatternRecognizer:
+    """Kfz-Kennzeichen: region (1-3 letters) + 1-2 letters + 1-4 digits
+    (e.g. B-AB 1234). Dash makes it fairly distinctive; context boosts it."""
+    return PatternRecognizer(
+        supported_entity="DE_KFZ",
+        name="KfzRecognizer",
+        supported_language="de",
+        patterns=[Pattern("kfz", r"\b[A-ZÄÖÜ]{1,3}-[A-Z]{1,2}\s?\d{1,4}[EH]?\b", 0.5)],
+        context=["kennzeichen", "kfz", "nummernschild", "auto", "fahrzeug"],
+    )
+
+
+def bic_recognizer() -> PatternRecognizer:
+    """German BIC/SWIFT: 4 bank letters + 'DE' + 2 + optional 3 (8 or 11 chars)."""
+    return PatternRecognizer(
+        supported_entity="DE_BIC",
+        name="BicRecognizer",
+        supported_language="de",
+        patterns=[Pattern("bic", r"\b[A-Z]{4}DE[A-Z0-9]{2}(?:[A-Z0-9]{3})?\b", 0.6)],
+        context=["bic", "swift", "bank", "iban"],
+    )
+
+
+def blz_recognizer() -> PatternRecognizer:
+    """Bankleitzahl: 8 digits. Ambiguous alone — context-gated."""
+    return PatternRecognizer(
+        supported_entity="DE_BLZ",
+        name="BlzRecognizer",
+        supported_language="de",
+        patterns=[Pattern("blz", r"\b\d{8}\b", 0.3)],
+        context=["bankleitzahl", "blz"],
+    )
+
+
 def eu_driving_licence_recognizer() -> PatternRecognizer:
     """Simplified EU driving licence number (DE format B + 10 alnum)."""
     return PatternRecognizer(
@@ -102,5 +183,12 @@ def german_gap_recognizers() -> list[PatternRecognizer]:
         handelsregister_recognizer(),
         steuernummer_recognizer(),
         steuer_id_recognizer(),
+        svnr_recognizer(),
+        krankenversicherung_recognizer(),
+        personalausweis_recognizer(),
+        reisepass_recognizer(),
+        kfz_recognizer(),
+        bic_recognizer(),
+        blz_recognizer(),
         eu_driving_licence_recognizer(),
     ]

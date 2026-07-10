@@ -43,6 +43,10 @@ _TYPE_MAP: dict[str, str] = {
     "DE_PERSONALAUSWEIS": "ID",
     "DE_RENTENVERSICHERUNG": "ID",
     "DE_KRANKENVERSICHERUNG": "ID",
+    "DE_SVNR": "ID",
+    "DE_KFZ": "ID",
+    "DE_BIC": "ID",
+    "DE_BLZ": "ID",
 }
 
 # German built-in recognizers to explicitly ENABLE (off by default upstream).
@@ -92,8 +96,15 @@ def _map_type(presidio_type: str) -> str:
 
 def _build_custom_recognizers(
     policy: Policy,
+    language: str,
 ) -> tuple[list[PatternRecognizer], dict[str, tuple[str, str]]]:
-    """Return (ad-hoc recognizers, entity_name -> (label, action))."""
+    """Return (ad-hoc recognizers, entity_name -> (label, action)).
+
+    supported_language MUST match the request language: PatternRecognizer defaults
+    to 'en', and Presidio silently skips recognizers whose language differs from
+    the analyzed text — so on German text an unset language means the tenant's
+    custom rules never fire.
+    """
     recognizers: list[PatternRecognizer] = []
     meta: dict[str, tuple[str, str]] = {}
     for i, ce in enumerate(policy.custom_entities or []):
@@ -105,6 +116,7 @@ def _build_custom_recognizers(
                 PatternRecognizer(
                     supported_entity=entity_name,
                     name=f"tenant_pattern_{i}",
+                    supported_language=language,
                     patterns=[Pattern(f"p{i}", ce.regex, ce.score or 0.7)],
                     context=ce.context or [],
                 )
@@ -114,6 +126,7 @@ def _build_custom_recognizers(
                 PatternRecognizer(
                     supported_entity=entity_name,
                     name=f"tenant_denylist_{i}",
+                    supported_language=language,
                     deny_list=ce.values,
                     context=ce.context or [],
                 )
@@ -123,7 +136,7 @@ def _build_custom_recognizers(
 
 def analyze(text: str, language: str, policy: Policy) -> list[RawSpan]:
     engine = get_engine()
-    ad_hoc, custom_meta = _build_custom_recognizers(policy)
+    ad_hoc, custom_meta = _build_custom_recognizers(policy, language)
 
     results = engine.analyze(
         text=text,
