@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { RedactionPanel } from "../components/RedactionPanel";
 import { ShieldIcon } from "../components/ShieldIcon";
+import { Markdown } from "../components/Markdown";
 import {
   createConversation,
   deleteConversation,
@@ -26,6 +27,9 @@ export default function ChatPage() {
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  // Per-conversation message history, in-memory for THIS session only. Message
+  // text is never persisted server-side (raw PII) nor in localStorage (spec).
+  const convStore = useRef<Record<string, ChatMessage[]>>({});
 
   const MAX_IMAGES = 6;
   const MAX_BYTES = 5 * 1024 * 1024;
@@ -56,8 +60,19 @@ export default function ChatPage() {
   }
 
   function newChat() {
+    if (conversationId) convStore.current[conversationId] = messages;
     setConversationId(null);
     setMessages([]);
+    setError(null);
+  }
+
+  // Switch to an existing conversation: stash the current one, restore the target
+  // from the in-memory store (empty if it wasn't opened this session).
+  function openConversation(id: string) {
+    if (id === conversationId) return;
+    if (conversationId) convStore.current[conversationId] = messages;
+    setConversationId(id);
+    setMessages(convStore.current[id] ?? []);
     setError(null);
   }
 
@@ -155,10 +170,7 @@ export default function ChatPage() {
                 background: c.id === conversationId ? "var(--surface-glass-strong)" : "transparent",
                 border: "1px solid transparent",
               }}
-              onClick={() => {
-                setConversationId(c.id);
-                setMessages([]);
-              }}
+              onClick={() => openConversation(c.id)}
             >
               <span style={{ fontSize: 13.5, color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {c.title || "Ohne Titel"}
@@ -218,7 +230,7 @@ export default function ChatPage() {
                     padding: "12px 15px",
                     borderRadius: "var(--radius-lg)",
                     color: "var(--text-primary)",
-                    whiteSpace: "pre-wrap",
+                    whiteSpace: m.role === "user" ? "pre-wrap" : "normal",
                     lineHeight: 1.55,
                     fontSize: 14.5,
                   }}
@@ -231,7 +243,9 @@ export default function ChatPage() {
                       ))}
                     </div>
                   )}
-                  {m.content || (m.role === "assistant" && busy ? "…" : "")}
+                  {m.role === "assistant"
+                    ? (m.content ? <Markdown text={m.content} /> : (busy ? "…" : null))
+                    : m.content}
                   {m.role === "assistant" && m.protection && <RedactionPanel protection={m.protection} />}
                 </div>
               </div>
