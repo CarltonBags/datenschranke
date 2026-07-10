@@ -1,16 +1,21 @@
 import { config } from "./config.js";
 import { buildServer } from "./server.js";
 import { connectRedis, closeRedis } from "./vault.js";
+import { connectSessions, closeSessions } from "./sessions.js";
+import { bootstrapPlatformAdmin } from "./bootstrap.js";
 import { closeDb } from "./db.js";
 
 async function main(): Promise<void> {
   await connectRedis();
+  await connectSessions();
+  await bootstrapPlatformAdmin();
   const app = await buildServer();
 
   const shutdown = async (signal: string) => {
     app.log.info({ signal }, "shutting down");
     await app.close();
     await closeRedis();
+    await closeSessions();
     await closeDb();
     process.exit(0);
   };

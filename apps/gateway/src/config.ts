@@ -32,6 +32,9 @@ export const config = {
   redactImages: opt("REDACT_IMAGES", "true") !== "false",
   /** Larger timeout for image OCR than for text redaction. */
   imageRedactTimeoutMs: Number(opt("IMAGE_REDACT_TIMEOUT_MS", "15000")),
+  /** Bootstrap the platform super-admin on first start (optional). */
+  platformAdminEmail: process.env.PLATFORM_ADMIN_EMAIL ?? "",
+  platformAdminPassword: process.env.PLATFORM_ADMIN_PASSWORD ?? "",
 } as const;
 
 export type Config = typeof config;

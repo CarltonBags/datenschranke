@@ -5,6 +5,8 @@ import { healthy as redactorHealthy } from "./redactorClient.js";
 import { openaiChatRoutes } from "./routes/openaiChat.js";
 import { productARoutes } from "./routes/productA.js";
 import { adminRoutes } from "./routes/admin.js";
+import { authRoutes } from "./routes/auth.js";
+import { platformRoutes } from "./routes/platform.js";
 
 export async function buildServer(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -28,8 +30,10 @@ export async function buildServer(): Promise<FastifyInstance> {
   });
 
   await app.register(openaiChatRoutes);
+  await app.register(authRoutes);
   await app.register(productARoutes);
   await app.register(adminRoutes);
+  await app.register(platformRoutes);
 
   return app;
 }

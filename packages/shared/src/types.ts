@@ -72,7 +72,8 @@ export type AuditEventType =
   | "map.deleted"
   | "policy.updated"
   | "auth.login"
-  | "apikey.created";
+  | "apikey.created"
+  | "user.created";
 
 export interface AuditEvent {
   tenant_id: string;

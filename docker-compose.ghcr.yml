@@ -86,6 +86,8 @@ services:
       DEFAULT_PROVIDER: ${DEFAULT_PROVIDER:-openai}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      PLATFORM_ADMIN_EMAIL: ${PLATFORM_ADMIN_EMAIL:-}
+      PLATFORM_ADMIN_PASSWORD: ${PLATFORM_ADMIN_PASSWORD:-}
     # No host port publish: Coolify's Traefik routes to this via the domain you
     # assign (targets the exposed container port). Publishing to the host collides
     # with other Coolify apps. Set GATEWAY_HOST_PORT only for bare `docker compose`.

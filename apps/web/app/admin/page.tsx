@@ -11,8 +11,11 @@
  * (`/api/gw/...`), which injects the tenant identity. No gateway creds here.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { me, logout } from "../../lib/auth";
 import { ThemeToggle } from "../../components/ThemeToggle";
 import { CustomEntities } from "../../components/CustomEntities";
+import { UserManagement } from "../../components/UserManagement";
 
 type Payload = Record<string, unknown>;
 interface AuditEvent {
@@ -60,8 +63,19 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [tab, setTab] = useState<"audit" | "entities">("audit");
+  const [tab, setTab] = useState<"audit" | "entities" | "users">("audit");
+  const [authed, setAuthed] = useState(false);
+  const router = useRouter();
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    me().then((m) => {
+      if (!m) { router.push("/login"); return; }
+      if (m.role === "platform_admin") { router.push("/platform"); return; }
+      if (m.role !== "tenant_admin") { router.push("/"); return; }
+      setAuthed(true);
+    });
+  }, [router]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -112,6 +126,8 @@ export default function AdminPage() {
     return `/api/gw/admin/audit?${params.toString()}`;
   }, [rangeMs, typeFilter]);
 
+  if (!authed) return <main style={{ minHeight: "100vh" }} />;
+
   return (
     <main style={{ height: "100vh", overflow: "auto", padding: "0 clamp(16px, 4vw, 48px) 64px", position: "relative", zIndex: 1 }}>
       <header style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", padding: "22px 0 18px", position: "sticky", top: 0, zIndex: 3 }}>
@@ -120,14 +136,17 @@ export default function AdminPage() {
           <div style={{ display: "inline-flex", gap: 4, padding: 3, borderRadius: 999, border: "1px solid var(--border-glass)" }}>
             <button onClick={() => setTab("audit")} className="transition" style={tabPill(tab === "audit")}>Audit-Log</button>
             <button onClick={() => setTab("entities")} className="transition" style={tabPill(tab === "entities")}>Eigene Erkennung</button>
+            <button onClick={() => setTab("users")} className="transition" style={tabPill(tab === "users")}>Benutzer</button>
           </div>
           <div style={{ flex: 1 }} />
           <a href="/" style={{ fontSize: 13, color: "var(--text-secondary)", textDecoration: "none" }}>← Chat</a>
+          <button onClick={async () => { await logout(); router.push("/login"); }} className="transition" style={{ fontSize: 13, color: "var(--text-secondary)", border: "1px solid var(--border-glass)", background: "transparent", borderRadius: 8, padding: "4px 10px" }}>Abmelden</button>
           <ThemeToggle />
         </div>
       </header>
 
       {tab === "entities" && <CustomEntities />}
+      {tab === "users" && <UserManagement />}
 
       {tab === "audit" && (
       <>

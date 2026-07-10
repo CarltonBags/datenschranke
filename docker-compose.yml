@@ -109,6 +109,8 @@ services:
       MOCK_PROVIDER_URL: http://provider-mock:9090
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      PLATFORM_ADMIN_EMAIL: ${PLATFORM_ADMIN_EMAIL:-}
+      PLATFORM_ADMIN_PASSWORD: ${PLATFORM_ADMIN_PASSWORD:-}
     ports:
       - "${GATEWAY_PORT:-8080}:8080"
 

@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { me, logout, type Me } from "../lib/auth";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { RedactionPanel } from "../components/RedactionPanel";
 import { ShieldIcon } from "../components/ShieldIcon";
@@ -18,6 +20,8 @@ import {
 } from "../lib/chat";
 
 export default function ChatPage() {
+  const router = useRouter();
+  const [user, setUser] = useState<Me | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -54,8 +58,14 @@ export default function ChatPage() {
   }
 
   useEffect(() => {
-    listConversations().then(setConversations).catch(() => {});
-  }, []);
+    // Gate: require a session. platform_admin has no chat workspace → console.
+    me().then((m) => {
+      if (!m) { router.push("/login"); return; }
+      if (m.role === "platform_admin") { router.push("/platform"); return; }
+      setUser(m);
+      listConversations().then(setConversations).catch(() => {});
+    });
+  }, [router]);
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
@@ -204,16 +214,25 @@ export default function ChatPage() {
             </div>
           ))}
         </div>
-        <a
-          href="/admin"
-          className="transition"
-          style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 11px", borderRadius: 10, border: "1px solid var(--border-glass)", color: "var(--text-secondary)", textDecoration: "none", fontSize: 13.5 }}
-        >
-          <span aria-hidden>▤</span> Admin · Audit-Log
-        </a>
-        <p style={{ fontSize: 11.5, color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>
-          Personenbezogene Daten werden erkannt und ersetzt, bevor sie den Anbieter erreichen.
-        </p>
+        {user?.role === "tenant_admin" && (
+          <a
+            href="/admin"
+            className="transition"
+            style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 11px", borderRadius: 10, border: "1px solid var(--border-glass)", color: "var(--text-secondary)", textDecoration: "none", fontSize: 13.5 }}
+          >
+            <span aria-hidden>▤</span> Admin-Konsole
+          </a>
+        )}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, fontSize: 12, color: "var(--text-secondary)", borderTop: "1px solid var(--border-glass)", paddingTop: 10 }}>
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.email}</span>
+          <button
+            onClick={async () => { await logout(); router.push("/login"); }}
+            className="transition"
+            style={{ border: "1px solid var(--border-glass)", background: "transparent", color: "var(--text-secondary)", borderRadius: 8, padding: "4px 10px", fontSize: 12, flexShrink: 0 }}
+          >
+            Abmelden
+          </button>
+        </div>
       </aside>
 
       {/* Main column */}
