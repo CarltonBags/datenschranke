@@ -4,7 +4,7 @@ import { Providers } from "./providers";
 import { Aurora } from "../components/Aurora";
 
 export const metadata: Metadata = {
-  title: "Company Chat — GDPR AI Gateway",
+  title: "Datenschranke — GDPR AI Gateway",
   description: "Chat with LLMs without exposing personal data to providers.",
 };
 

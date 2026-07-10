@@ -178,6 +178,13 @@ export default function ChatPage() {
             </div>
           ))}
         </div>
+        <a
+          href="/admin"
+          className="transition"
+          style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 11px", borderRadius: 10, border: "1px solid var(--border-glass)", color: "var(--text-secondary)", textDecoration: "none", fontSize: 13.5 }}
+        >
+          <span aria-hidden>▤</span> Admin · Audit-Log
+        </a>
         <p style={{ fontSize: 11.5, color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>
           Personenbezogene Daten werden erkannt und ersetzt, bevor sie den Anbieter erreichen.
         </p>
