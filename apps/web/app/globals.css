@@ -13,6 +13,8 @@
   --transition: 180ms cubic-bezier(0.4, 0, 0.2, 1);
 
   /* light theme (default) */
+  --grad-top: #ffb277;    /* orange */
+  --grad-bottom: #ff87bd; /* pink */
   --bg: #eef1f8;
   --bg-grad-1: #e7ecfb;
   --bg-grad-2: #f4eefb;
@@ -30,6 +32,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    --grad-top: #3a2114;
+    --grad-bottom: #38182a;
     --bg: #0b0d12;
     --bg-grad-1: #10131c;
     --bg-grad-2: #171223;
@@ -47,6 +51,8 @@
 }
 /* explicit dark wins the toggle in both directions */
 :root[data-theme="dark"] {
+  --grad-top: #3a2114;
+  --grad-bottom: #38182a;
   --bg: #0b0d12;
   --bg-grad-1: #10131c;
   --bg-grad-2: #171223;
@@ -62,6 +68,8 @@
 }
 
 :root[data-theme="light"] {
+  --grad-top: #ffb277;
+  --grad-bottom: #ff87bd;
   --surface-glass: rgba(255, 255, 255, 0.28);
   --surface-glass-strong: rgba(255, 255, 255, 0.44);
   --border-glass: rgba(255, 255, 255, 0.3);
@@ -71,10 +79,11 @@
 
 * { box-sizing: border-box; }
 
-/* Base colour lives on the ROOT so the fixed z-index:-1 aurora (a child of body)
-   renders IN FRONT of it. A solid body background would hide the aurora. */
-html { background: var(--bg); }
+/* Slight top→bottom orange→pink gradient backdrop. */
+html { background: linear-gradient(180deg, var(--grad-top), var(--grad-bottom)) fixed; }
 body { background: transparent; }
+/* Aurora schlieren replaced by the flat gradient. */
+.aurora { display: none; }
 html, body {
   margin: 0;
   padding: 0;

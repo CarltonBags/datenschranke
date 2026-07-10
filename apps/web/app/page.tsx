@@ -226,8 +226,7 @@ export default function ChatPage() {
         </div>
         <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "48px 8px 16px" }}>
           <div
-            className={messages.length ? "glass" : ""}
-            style={{ maxWidth: 760, margin: "0 auto", borderRadius: "var(--radius-xl)", padding: messages.length ? "20px 20px 24px" : 0, display: "flex", flexDirection: "column", gap: 16 }}
+            style={{ maxWidth: 760, margin: "0 auto", display: "flex", flexDirection: "column", gap: 16 }}
           >
             {messages.length === 0 && (
               <div style={{ textAlign: "center", color: "var(--text-secondary)", marginTop: 90 }}>

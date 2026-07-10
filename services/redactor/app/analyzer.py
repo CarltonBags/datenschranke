@@ -47,6 +47,8 @@ _TYPE_MAP: dict[str, str] = {
     "DE_KFZ": "ID",
     "DE_BIC": "ID",
     "DE_BLZ": "ID",
+    "DE_PHONE": "PHONE",
+    "DE_STREET": "ADDRESS",
 }
 
 # German built-in recognizers to explicitly ENABLE (off by default upstream).

@@ -166,6 +166,45 @@ def blz_recognizer() -> PatternRecognizer:
     )
 
 
+def german_phone_recognizer() -> PatternRecognizer:
+    """German phone numbers Presidio's phonenumbers-based recognizer often misses
+    (national 0-prefixed, (0…) area codes, / and - separators). Distinctive enough
+    to fire standalone; context boosts it further."""
+    return PatternRecognizer(
+        supported_entity="DE_PHONE",
+        name="GermanPhoneRecognizer",
+        supported_language="de",
+        patterns=[
+            # +49 / 0049 international (no leading \b — '+' is not a word char)
+            Pattern("phone_intl", r"(?:\+49|0049)[\s/-]?\(?\d{2,5}\)?[\s/-]?\d{2,}(?:[\s/-]?\d{2,})*", 0.6),
+            # national 0-prefixed, optional (0xx) area code; main block ≥3 digits
+            # to avoid matching short 4-digit numbers. Fires standalone (>=0.6).
+            Pattern("phone_nat", r"\b0\(?\d{1,5}\)?[\s/-]?\d{3,}(?:[\s/-]?\d{2,})*\b", 0.6),
+        ],
+        context=["telefon", "tel", "handy", "mobil", "rufnummer", "fon", "festnetz"],
+    )
+
+
+def german_street_recognizer() -> PatternRecognizer:
+    """German street address: a name ending in a common street suffix followed by
+    a house number (e.g. Musterstraße 12, Lange Gasse 7a, Bahnhofstr. 3). spaCy
+    NER catches cities, not street+number — this fills the ADDRESS gap."""
+    suffix = r"(?:stra(?:ße|sse)|str\.|weg|allee|platz|gasse|ring|damm|ufer|steig|chaussee|wall|markt)"
+    return PatternRecognizer(
+        supported_entity="DE_STREET",
+        name="GermanStreetRecognizer",
+        supported_language="de",
+        patterns=[
+            Pattern(
+                "street",
+                rf"\b(?:[A-ZÄÖÜ][a-zäöüß.\-]+\s)?[A-ZÄÖÜ][a-zäöüßA-ZÄÖÜ.\-]*{suffix}\s+\d{{1,4}}[a-z]?\b",
+                0.6,
+            ),
+        ],
+        context=["straße", "strasse", "adresse", "anschrift", "wohnhaft", "wohnt", "plz"],
+    )
+
+
 def eu_driving_licence_recognizer() -> PatternRecognizer:
     """Simplified EU driving licence number (DE format B + 10 alnum)."""
     return PatternRecognizer(
@@ -190,5 +229,7 @@ def german_gap_recognizers() -> list[PatternRecognizer]:
         kfz_recognizer(),
         bic_recognizer(),
         blz_recognizer(),
+        german_phone_recognizer(),
+        german_street_recognizer(),
         eu_driving_licence_recognizer(),
     ]
