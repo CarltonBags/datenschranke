@@ -13,8 +13,8 @@
   --transition: 180ms cubic-bezier(0.4, 0, 0.2, 1);
 
   /* light theme (default) */
-  --grad-top: #ffb277;    /* orange */
-  --grad-bottom: #ff87bd; /* pink */
+  --grad-top: #ffe6d6;    /* soft orange */
+  --grad-bottom: #ffdcea; /* soft pink */
   --bg: #eef1f8;
   --bg-grad-1: #e7ecfb;
   --bg-grad-2: #f4eefb;
@@ -68,8 +68,8 @@
 }
 
 :root[data-theme="light"] {
-  --grad-top: #ffb277;
-  --grad-bottom: #ff87bd;
+  --grad-top: #ffe6d6;
+  --grad-bottom: #ffdcea;
   --surface-glass: rgba(255, 255, 255, 0.28);
   --surface-glass-strong: rgba(255, 255, 255, 0.44);
   --border-glass: rgba(255, 255, 255, 0.3);
